@@ -1,0 +1,6 @@
+### Configuration data for the Tool Rental App. 
+### This file and the tools inventory file constitute the data needed to load the app.
+
+date-format = mm/dd/yy 
+
+

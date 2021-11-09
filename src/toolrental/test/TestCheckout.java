@@ -33,7 +33,7 @@ public class TestCheckout {
 	@Test
 	public void TestForScenario1() throws ToolRentalException {
 		//This scenario has discount percentage more than 100.
-		//It should fail with a message.
+		//It should test for the expected error and expected error message.
 		
         thrown.expect(ToolRentalException.class);
         thrown.expectMessage(AppErrorMessage.INVALID_DISCOUNT_PERCENT);
@@ -43,6 +43,30 @@ public class TestCheckout {
 		LocalDate contractDate = LocalDate.of(2015, 9, 3);
 		int rentalDayCount = 5;
 		int discountPercent = 101; 
+		
+		CheckoutData data = new CheckoutData(myRentalTool, rentalDayCount, discountPercent, contractDate);
+		ArrayList<CheckoutData> toolList = new ArrayList<CheckoutData>();
+		toolList.add(data);
+		Checkout checkout = new Checkout(toolList);
+		
+		checkout.doCheckout();//this should throw an exception as declared above at the beginning of this test code.
+		
+		checkout.createAgreement();//this will not be called 
+	} 
+	
+		@Test
+	public void TestForScenario1a() throws ToolRentalException {
+		//This scenario has rental days less than 1.
+		//It should test for the expected error and expected error message.
+		
+        thrown.expect(ToolRentalException.class);
+        thrown.expectMessage(AppErrorMessage.INVALID_RENTAL_DAY_COUNT);
+		
+		String toolSpec = "Jackhammer,Ridgid,JAKR,2.99,0,0 ";
+		Tool myRentalTool = ToolRentalUtils.validateAndCreateTool(toolSpec);
+		LocalDate contractDate = LocalDate.of(2015, 9, 3);
+		int rentalDayCount = 0;
+		int discountPercent = 10; 
 		
 		CheckoutData data = new CheckoutData(myRentalTool, rentalDayCount, discountPercent, contractDate);
 		ArrayList<CheckoutData> toolList = new ArrayList<CheckoutData>();

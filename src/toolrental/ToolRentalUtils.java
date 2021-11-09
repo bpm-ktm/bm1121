@@ -83,7 +83,6 @@ public class ToolRentalUtils {
 		//If it is a Friday and the next day is the Independence Day, it is a holiday.
 		if(date.getDayOfWeek() == DayOfWeek.FRIDAY 
 				&& isIndependenceDay(date.plusDays(1))) { 
-			System.out.println("test 2");
 			return true;
 		} 
 		

@@ -1,53 +1,148 @@
 package toolrental;
 
-import java.util.List;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
- * Class to check out Tool(s) for rent to a customer.
+ * Class to represent data needed to complete a checkout for a specific Tool. 
  * @author Binod
  *
  */
-public class Checkout {
+public class CheckoutData {
+ /*
+  * This class is for future proofing, to allow more than one tool to be rented 
+  * at one time (instead of just one), so that we can send a list of CheckoutData to the checkout process.
+  */
 	
-	//Tools to checkout. For future proofing, allow multiple tools to be checked out at the same time.
-	private List<CheckoutData> checkoutData; 
+	//Tool to rent out.
+	private Tool tool; 
 	
-	public Checkout(List<CheckoutData> checkoutData) {
-		this.checkoutData = checkoutData;
-
+	private int totalDayCount;	
+	
+	private int discountPercent; 
+	
+	private LocalDate checkoutDate; 
+	
+	//Below variables are calculated and tracked here to print out in rental agreement.
+	private int numWeekDays, numWeekendDays, numHolidays; 
+	private BigDecimal grossRentAmount;//before discount, rounded to cents
+	private BigDecimal discountAmount; //rounded to cents
+	private BigDecimal netRentAmount;//after discount, rounded to cents
+	private LocalDate dueDate;
+	private int daysCharged;//actual number of days charged
+	
+	/**
+	 * 
+	 * @param tool
+	 * @param totalDayCount it is the total number of days in the contract period. The number of days actually charged may be less than this depending on the policy.
+	 * @param discountPercent
+	 * @param checkoutDate
+	 */
+	public CheckoutData(Tool tool, int totalDayCount, int discountPercent, LocalDate checkoutDate) {
+		this.tool = tool;		
+		this.totalDayCount = totalDayCount;
+		this.discountPercent = discountPercent;
+		this.checkoutDate = checkoutDate;
+	}
+	
+	public Tool getTool() {
+		return tool;
 	}
 
-	public void doCheckout() throws ToolRentalException {
-		//Invoke checkout for each tool in the list.
-		for(CheckoutData data : checkoutData) {
-			data.doCheckoutCalculation();
-		}	
+	public int getRentalDayCount() {
+		return totalDayCount;
+	}
 
+	public int getDiscountPercent() {
+		return discountPercent;
+	}
+
+	public LocalDate getCheckoutDate() {
+		return checkoutDate;
 	} 
 	
-	public void createAgreement() {
-		//We need separate Customer class and StoreInfo classes.
-		//Creating some hard-coded values for this demo.
+	public LocalDate getDueDate() {
+		return dueDate;
+	}
+	
+	public int getNumWeekDays() {
+		return numWeekDays;
+	}
+
+	public int getNumWeekendDays() {
+		return numWeekendDays;
+	}
+
+	public int getNumHolidays() {
+		return numHolidays;
+	}
+
+	public BigDecimal getGrossRentAmount() {
+		return grossRentAmount;
+	}
+
+	public BigDecimal getNetRentAmount() {
+		return netRentAmount;
+	} 
+	
+	public BigDecimal getDiscountAmount() {
+		return discountAmount;
+	}
+
+	public int getDaysCharged() {
+		return daysCharged;
+	}
+	
+	/**
+	 * Performs calculations needed for checkout.
+	 */
+	public void doCheckoutCalculation() throws ToolRentalException{ 
 		
-		StringBuffer customerInfo = new StringBuffer("Customer:\nJohn Doe\n"); 
-		customerInfo.append("123 Rt 100 \n");
-		customerInfo.append("New City\n");
-		customerInfo.append("NY 111111\n\n");
+		//Check if we have discount in the correct range.
+		if(discountPercent < 0 || discountPercent > 100) {
+			throw new ToolRentalException(AppErrorMessage.INVALID_DISCOUNT_PERCENT);
+		}
 		
-		StringBuffer storeInfo = new StringBuffer("TOOL RENTAL INC.\n");
-		storeInfo.append("New London City\n");
-		storeInfo.append("phone: 1112223334444\n\n");
+		//check if we have rental day number is in the correct range.
+		if(totalDayCount < 1) {
+			throw new ToolRentalException(AppErrorMessage.INVALID_RENTAL_DAY_COUNT);
+		}
 		
-		//Pass the date formatter. 
-		//In a real scenario, the date format may be specified in an external 
-		//configuration file so that it can be easily updated globally.
-		//Hard-coding for now.
-		String dateFormatPattern = "MM/dd/yy";
+		//Compute the number of weekdays, weekend days, and holidays.
+		dueDate = checkoutDate.plusDays(totalDayCount);
+		int[] billableDays = ToolRentalUtils.countBillableDays(checkoutDate, dueDate); 
+		numWeekDays = billableDays[0];
+		numWeekendDays = billableDays[1]; 
+		numHolidays = billableDays[2];  
 		
-		RentalAgreement agreement = new RentalAgreement();
+		ToolType toolType = tool.getType();
 		
-		System.out.println("\n\n Printing out Rental Agreement ....\n");
-		agreement.printRentalAgreement(checkoutData, customerInfo.toString(), storeInfo.toString(), dateFormatPattern);
+		//Do all monetary calculations using BigDecimal class.
+		
+		BigDecimal discountFraction = new BigDecimal(discountPercent).divide(new BigDecimal(100));
+		
+		BigDecimal countWeekDays = new BigDecimal(numWeekDays);
+		BigDecimal countWeekendDays = new BigDecimal(numWeekendDays);
+		BigDecimal countHolidDays = new BigDecimal(numHolidays);
+		
+		grossRentAmount = toolType.getWeekdayRent().multiply(countWeekDays) 
+				.add(toolType.getWeekendRent().multiply(countWeekendDays))
+				.add(toolType.getHolidayRent().multiply(countHolidDays));
+
+		grossRentAmount = ToolRentalUtils.roundCurrencyWithHalfUp(grossRentAmount);
+		
+		discountAmount = grossRentAmount.multiply(discountFraction); 
+		
+		discountAmount = ToolRentalUtils.roundCurrencyWithHalfUp(discountAmount); 
+		
+		netRentAmount = grossRentAmount.subtract(discountAmount) ;
+		
+		//TAXES SKIPPED for this demo.
+		
+		daysCharged = numWeekDays //weekdays are ALWAYS charged 
+				+ (toolType.isChargedWeekend() ? numWeekendDays : 0) 
+				+ (toolType.isChargedHoliday() ? numHolidays : 0);
 		
 	}
+	
 }

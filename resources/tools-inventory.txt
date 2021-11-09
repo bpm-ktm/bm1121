@@ -1,0 +1,17 @@
+# CSV file specifying the inventory of tools. Each line represents one tool.
+# Format is below. If rent is not charged, for example for holiday, enter 0. All rents in US dollars.
+
+# toolType,brand,toolCode,weekDayDailyRent,weekendDailyRent,HolidayDailyRent 
+#
+# Example:
+# Ladder,Werner,LADW,1.99,0,0 
+
+####### INVENTORY START ########## 
+Ladder,Werner,LADW,1.99,1.99,0 
+Chainsaw,Stihl,CHNS,1.49,0,1.49 
+Jackhammer,Ridgid,JAKR,2.99,0,0 
+Jackhammer,DeWalt,JAKD,2.99,0,0 
+
+
+####### INVENTORY END ########## 
+
